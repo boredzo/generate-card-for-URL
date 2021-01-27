@@ -66,8 +66,6 @@ def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None,
 
 		fetched_remotely = True
 
-	#	data = response.read()
-	#	import subprocess; subprocess.Popen([ 'head', '-n', '20' ], stdin=subprocess.PIPE).stdin.write(data)
 		soup = bs4.BeautifulSoup(response, 'html.parser')
 		def get_meta_property(property_name):
 			meta = soup.find('meta', attrs={ 'property': property_name })
