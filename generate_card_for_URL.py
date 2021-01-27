@@ -100,6 +100,7 @@ def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None,
 	lines.remove(cursor)
 
 	for x in lines: print(x.replace('CARDCSSCLASSPREFIX', css_class_prefix))
+	sys.stdout.flush()
 
 	if fetched_remotely: time.sleep(delay_after_fetch)
 
