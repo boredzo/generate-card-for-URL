@@ -111,13 +111,17 @@ div.CARDCSSCLASSPREFIX {
 	border-radius: 5pt;
 	max-width: 300pt;
 	font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+	margin-bottom: 5pt;
+	margin-left: auto;
+    margin-right: auto;
+    padding: 5pt;
 }
 div.CARDCSSCLASSPREFIX.CARDCSSCLASSPREFIX_with_image {
 	display: grid;
 	grid-template-columns: 1fr 2fr;
 }
 div.CARDCSSCLASSPREFIX div.CARDCSSCLASSPREFIX_thumbnail {
-	padding: 5pt;
+	margin-right: 5pt;
 }
 div.CARDCSSCLASSPREFIX div.CARDCSSCLASSPREFIX_thumbnail img.CARDCSSCLASSPREFIX_thumbnail_value {
 	width: 100pt;
