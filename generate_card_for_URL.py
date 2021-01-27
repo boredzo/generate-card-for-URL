@@ -6,6 +6,7 @@ use_urllib = False
 import os
 import sys
 import re
+import time
 import pathlib
 import csv
 if use_urllib:
@@ -43,7 +44,8 @@ class ResourceCache(object):
 	def __getitem__(self, src_URL):
 		return self._cache[src_URL]
 
-def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None, _cache=ResourceCache()):
+def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None, delay_after_fetch=0, _cache=ResourceCache()):
+	fetched_remotely = False
 	try:
 		cached_src_URL, url_str, title_str, author_str, image_str, description_str = _cache[src_URL]
 	except KeyError:
@@ -61,6 +63,8 @@ def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None,
 				response_code = int(curl_output)
 				print('error fetching %s: response was error %u' % (src_URL, response_code), file=sys.stderr)
 				return
+
+		fetched_remotely = True
 
 	#	data = response.read()
 	#	import subprocess; subprocess.Popen([ 'head', '-n', '20' ], stdin=subprocess.PIPE).stdin.write(data)
@@ -96,6 +100,8 @@ def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None,
 	lines.remove(cursor)
 
 	for x in lines: print(x.replace('CARDCSSCLASSPREFIX', css_class_prefix))
+
+	if fetched_remotely: time.sleep(delay_after_fetch)
 
 stylesheet = '''\
 <style type="text/css">
@@ -133,6 +139,7 @@ if __name__ == '__main__':
 	parser.add_argument('-F', '--read-from', dest='input_paths', metavar='path', action='append', help='File to read URLs from, one per line (- for stdin)')
 	parser.add_argument('--css-class-prefix', default='card', help='Use this prefix on all CSS classes applied to the generated cards')
 	parser.add_argument('--default-image', dest='default_image_URL', metavar='URL', help='Use this thumbnail for resources that don\'t have an og:image')
+	parser.add_argument('--delay-after-fetch', metavar='seconds', default=0, type=float, help='Wait this many seconds after each remote fetch (to avoid arousing the ire of server admins)')
 	parser.add_argument('input_URLs', metavar='URL', nargs='*', help='URLs to generate cards for')
 	opts = parser.parse_args()
 
@@ -144,7 +151,7 @@ if __name__ == '__main__':
 	if opts.input_paths:
 		for line in fileinput.input(opts.input_paths):
 			URL = line.strip()
-			print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL)
+			print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL, delay_after_fetch=opts.delay_after_fetch)
 	for URL in opts.input_URLs:
-		print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL)
+		print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL, delay_after_fetch=opts.delay_after_fetch)
 	print('</div>')
