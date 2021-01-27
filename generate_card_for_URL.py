@@ -6,39 +6,75 @@ use_urllib = False
 import os
 import sys
 import re
+import pathlib
+import csv
 if use_urllib:
 	import urllib.request
 else:
 	import subprocess
 import bs4
 
-def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None):
-	if use_urllib:
-		response = urllib.request.urlopen(src_URL)
-		if response.getcode() != 200:
-			print('error fetching %s: response was error %u' % (src_URL, response.getcode()), file=sys.stderr)
-			return
-	else:
-		curl_output_separator='\n---CARD_FETCHER_CURL_OUTPUT_SEPARATOR---\n'
-		curl = subprocess.Popen([ 'curl', '-L', '--write-out', curl_output_separator + '%{response_code}', src_URL ], stdout=subprocess.PIPE)
-		response = curl.stdout.read()
-		response, curl_output = response.split(curl_output_separator.encode('utf-8'))
-		if curl.wait() != 0:
-			response_code = int(curl_output)
-			print('error fetching %s: response was error %u' % (src_URL, response_code), file=sys.stderr)
-			return
-		
-#	data = response.read()
-#	import subprocess; subprocess.Popen([ 'head', '-n', '20' ], stdin=subprocess.PIPE).stdin.write(data)
-	soup = bs4.BeautifulSoup(response, 'html.parser')
-	def get_meta_property(property_name):
-		meta = soup.find('meta', attrs={ 'property': property_name })
-		return meta['content'] if meta else None
-	title_str = get_meta_property('og:title')
-	image_str = get_meta_property('og:image')
-	description_str = get_meta_property('og:description')
-	author_str = get_meta_property('og:author')
-	url_str = get_meta_property('og:url')
+class ResourceCache(object):
+	def __init__(self):
+		self.cache_dir_path = pathlib.Path('~/.generate_card_for_URL').expanduser()
+		try: os.mkdir(self.cache_dir_path)
+		except FileExistsError: pass
+
+		self.csv_file_path = self.cache_dir_path.joinpath('URLs.csv')
+		if not self.csv_file_path.exists():
+			with open(self.csv_file_path, 'w') as f:
+				writer = csv.writer(f)
+				writer.writerow([ 'source_URL', 'og:url', 'og:title', 'og:author', 'og:image', 'og:description' ])
+
+		self._cache = {}
+		with open(self.csv_file_path, 'r') as f:
+			reader = csv.reader(f)
+			for row in reader:
+				cached_src_URL = row[0]
+				self._cache[cached_src_URL] = row
+
+
+	def add(self, src_URL, meta_URL, title, author, image, description):
+		assert src_URL, 'source URL is a required argument; must be a string, not None'
+		with open(self.csv_file_path, 'a') as f:
+			writer = csv.writer(f)
+			writer.writerow([ src_URL, meta_URL or '', title or '', author or '', image or '', description or '' ])
+
+	def __getitem__(self, src_URL):
+		return self._cache[src_URL]
+
+def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None, _cache=ResourceCache()):
+	try:
+		cached_src_URL, url_str, title_str, author_str, image_str, description_str = _cache[src_URL]
+	except KeyError:
+		if use_urllib:
+			response = urllib.request.urlopen(src_URL)
+			if response.getcode() != 200:
+				print('error fetching %s: response was error %u' % (src_URL, response.getcode()), file=sys.stderr)
+				return
+		else:
+			curl_output_separator='\n---CARD_FETCHER_CURL_OUTPUT_SEPARATOR---\n'
+			curl = subprocess.Popen([ 'curl', '-L', '--write-out', curl_output_separator + '%{response_code}', src_URL ], stdout=subprocess.PIPE)
+			response = curl.stdout.read()
+			response, curl_output = response.split(curl_output_separator.encode('utf-8'))
+			if curl.wait() != 0:
+				response_code = int(curl_output)
+				print('error fetching %s: response was error %u' % (src_URL, response_code), file=sys.stderr)
+				return
+
+	#	data = response.read()
+	#	import subprocess; subprocess.Popen([ 'head', '-n', '20' ], stdin=subprocess.PIPE).stdin.write(data)
+		soup = bs4.BeautifulSoup(response, 'html.parser')
+		def get_meta_property(property_name):
+			meta = soup.find('meta', attrs={ 'property': property_name })
+			return meta['content'] if meta else None
+		title_str = get_meta_property('og:title')
+		image_str = get_meta_property('og:image')
+		description_str = get_meta_property('og:description')
+		author_str = get_meta_property('og:author')
+		url_str = get_meta_property('og:url')
+
+		_cache.add(src_URL, url_str, title_str, author_str, image_str, description_str)
 
 	cursor = object()
 	lines = [
