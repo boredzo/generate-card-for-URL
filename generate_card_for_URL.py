@@ -44,7 +44,7 @@ class ResourceCache(object):
 	def __getitem__(self, src_URL):
 		return self._cache[src_URL]
 
-def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None, delay_after_fetch=0, _cache=ResourceCache()):
+def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None, delay_after_fetch=0, verbose=False, _cache=ResourceCache()):
 	fetched_remotely = False
 	try:
 		cached_src_URL, url_str, title_str, author_str, image_str, description_str = _cache[src_URL]
@@ -77,6 +77,9 @@ def print_card_for_URL(src_URL, css_class_prefix='card', default_image_URL=None,
 		url_str = get_meta_property('og:url')
 
 		_cache.add(src_URL, url_str, title_str, author_str, image_str, description_str)
+	else:
+		if verbose:
+			print('Cache hit!', file=sys.stderr)
 
 	cursor = object()
 	lines = [
@@ -143,6 +146,7 @@ if __name__ == '__main__':
 	parser.add_argument('--css-class-prefix', default='card', help='Use this prefix on all CSS classes applied to the generated cards')
 	parser.add_argument('--default-image', dest='default_image_URL', metavar='URL', help='Use this thumbnail for resources that don\'t have an og:image')
 	parser.add_argument('--delay-after-fetch', metavar='seconds', default=0, type=float, help='Wait this many seconds after each remote fetch (to avoid arousing the ire of server admins)')
+	parser.add_argument('--verbose', action='store_true', default=False, help='Print more information about what the tool is or is not doing')
 	parser.add_argument('input_URLs', metavar='URL', nargs='*', help='URLs to generate cards for')
 	opts = parser.parse_args()
 
@@ -154,7 +158,7 @@ if __name__ == '__main__':
 	if opts.input_paths:
 		for line in fileinput.input(opts.input_paths):
 			URL = line.strip()
-			print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL, delay_after_fetch=opts.delay_after_fetch)
+			print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL, delay_after_fetch=opts.delay_after_fetch, verbose=opts.verbose)
 	for URL in opts.input_URLs:
-		print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL, delay_after_fetch=opts.delay_after_fetch)
+		print_card_for_URL(URL, css_class_prefix=opts.css_class_prefix, default_image_URL=opts.default_image_URL, delay_after_fetch=opts.delay_after_fetch, verbose=opts.verbose)
 	print('</div>')
